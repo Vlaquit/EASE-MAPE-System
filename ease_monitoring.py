@@ -1,17 +1,18 @@
 import os
 import time
 import json
-
+import pymongo
+import datetime
 import docker
 
 
-def cpu_usage(data_json):
+def cpu_usage(data):
     cpu_percent = 0.0
-    cpu = int(data_json['cpu_stats']['cpu_usage']['total_usage'])
-    system_cpu = int(data_json['cpu_stats']['system_cpu_usage'])
-    previous_cpu = int(data_json['precpu_stats']['cpu_usage']['total_usage'])
-    previous_system_cpu = int(data_json['precpu_stats']['system_cpu_usage'])
-    percpu_len = len(data_json['cpu_stats']['cpu_usage']['percpu_usage'])
+    cpu = int(data['cpu_stats']['cpu_usage']['total_usage'])
+    system_cpu = int(data['cpu_stats']['system_cpu_usage'])
+    previous_cpu = int(data['precpu_stats']['cpu_usage']['total_usage'])
+    previous_system_cpu = int(data['precpu_stats']['system_cpu_usage'])
+    percpu_len = len(data['cpu_stats']['cpu_usage']['percpu_usage'])
 
     cpu_delta = cpu - previous_cpu
     system_delta = system_cpu - previous_system_cpu
@@ -22,28 +23,31 @@ def cpu_usage(data_json):
     return cpu_percent
 
 
-def memory_usage(data_json):
-    memory = int(data_json['memory_stats']['usage'])
-    memory_limit = int(data_json['memory_stats']['limit'])
+def memory_usage(data):
+    memory = int(data['memory_stats']['usage'])
+    memory_limit = int(data['memory_stats']['limit'])
 
     return {'memory': memory, 'memory_limit': memory_limit, 'memory_percent': 100 * memory / memory_limit}
 
 
-def disk_io(data_json):
-    disk_i = int(data_json['blkio_stats']['io_service_bytes_recursive'][0]['value'])
-    disk_o = int(data_json['blkio_stats']['io_service_bytes_recursive'][1]['value'])
+def disk_io(data):
+    disk_i = int(data['blkio_stats']['io_service_bytes_recursive'][0]['value'])
+    disk_o = int(data['blkio_stats']['io_service_bytes_recursive'][1]['value'])
 
     return {'disk_i': disk_i, 'disk_o': disk_o}
 
 
-def network_throughput(data_json):
-    rx_bytes = int(data_json['networks']['eth0']['rx_bytes'])
-    tx_bytes = int(data_json['networks']['eth0']['tx_bytes'])
+def network_throughput(data):
+    rx_bytes = int(data['networks']['eth0']['rx_bytes'])
+    tx_bytes = int(data['networks']['eth0']['tx_bytes'])
 
     return {'rx': rx_bytes, 'tx': tx_bytes}
 
 
 docker_client = docker.from_env()
+client = pymongo.MongoClient("mongodb+srv://Vlaquit:FsKxF8LT9Aqr6VKZ@cluster0-wuhr3.mongodb.net/test?retryWrites=true&w=majority")
+db = client.monitoring
+
 exiting = False
 
 
@@ -51,7 +55,7 @@ def run_monitoring(stream):
     streaming = stream
     while not exiting:
         containers = docker_client.containers.list()
-        data_dict = {}
+        data_dict = {'date': datetime.datetime.utcnow()}
         data_json = None
         if streaming:
             os.system("clear")
@@ -96,7 +100,9 @@ def run_monitoring(stream):
                                         'network': {'rx': network_throughput(cont_data_dict)['rx'],
                                                     'tx': network_throughput(cont_data_dict)['tx']}}
 
-        data_json = json.dumps(data_dict)
+        # data_json = json.dumps(data_dict)
+        post = data_dict
+        db.containers_data.insert_one(post).inserted_id
         print("\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _")
         print("JSON text here : ")
         print(data_json)
