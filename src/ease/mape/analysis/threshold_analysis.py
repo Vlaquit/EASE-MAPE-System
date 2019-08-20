@@ -1,6 +1,7 @@
-import time
-import pymongo
 import os
+import time
+
+import pymongo
 from dotenv import load_dotenv
 
 # Get environment variable
