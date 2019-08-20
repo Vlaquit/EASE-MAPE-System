@@ -1,9 +1,13 @@
+import datetime
 import os
 import time
-import json
-import pymongo
-import datetime
+
 import docker
+import pymongo
+from dotenv import load_dotenv
+
+# Get environment variable
+load_dotenv()
 
 
 # Gets the CPU data from dictionary, calculates the percentage and returns it
@@ -85,7 +89,7 @@ def get_network_throughput(data):
 docker_client = docker.from_env()
 
 # Connect to the MongoDB database
-client = pymongo.MongoClient("mongodb+srv://Vlaquit:FsKxF8LT9Aqr6VKZ@cluster0-wuhr3.mongodb.net/test?retryWrites=true&w=majority")
+client = pymongo.MongoClient("mongodb+srv://" + os.getenv("MONGODB_ID") + ":" + os.getenv("MONGODB_PW") + "@cluster0-wuhr3.mongodb.net/test?retryWrites=true&w=majority")
 db = client.monitoring
 
 exiting = False
@@ -104,7 +108,6 @@ def run_monitoring(stream):
             print("______________________________________________________")
             for cont in containers:
                 cont_data_dict = cont.stats(decode=False, stream=False)
-
                 data_dict[cont.name] = {'short_id': cont.short_id,
                                         'cpu': {'cpu_usage': get_cpu_percent(cont_data_dict)},
                                         'memory': {'memory': get_memory(cont_data_dict)['memory'],
@@ -129,7 +132,6 @@ def run_monitoring(stream):
         else:
             for cont in containers:
                 cont_data_dict = cont.stats(decode=False, stream=False)
-
                 data_dict[cont.name] = {'short_id': cont.short_id,
                                         'cpu': {'cpu_usage': get_cpu_percent(cont_data_dict)},
                                         'memory': {'memory': get_memory(cont_data_dict)['memory'],
