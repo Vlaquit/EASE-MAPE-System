@@ -1,174 +1,145 @@
 import datetime
 import os
 import time
+from abc import ABC, abstractmethod
 
 import docker
 import pymongo
+
 from dotenv import load_dotenv
 
 # Get environment variable
 load_dotenv()
 
 
-# Gets the CPU data from dictionary, calculates the percentage and returns it
-def get_cpu_percent(data):
-    cpu_percent = None
-    if data['cpu_stats']['cpu_usage']['total_usage'] is not None:
-        cpu = int(data['cpu_stats']['cpu_usage']['total_usage'])
-    else:
-        cpu = 0
-    if data['cpu_stats']['system_cpu_usage'] is not None:
-        system_cpu = int(data['cpu_stats']['system_cpu_usage'])
-    else:
-        system_cpu = 0
-    if data['precpu_stats']['cpu_usage']['total_usage'] is not None:
-        previous_cpu = int(data['precpu_stats']['cpu_usage']['total_usage'])
-    else:
-        previous_cpu = 0
-    if data['precpu_stats']['system_cpu_usage'] is not None:
-        previous_system_cpu = int(data['precpu_stats']['system_cpu_usage'])
-    else:
-        previous_system_cpu = 0
-    if data['cpu_stats']['cpu_usage']['percpu_usage'] is not None:
-        percpu_len = len(data['cpu_stats']['cpu_usage']['percpu_usage'])
-    else:
-        percpu_len = 1
+class Monitoring(ABC):
+    def __init__(self, client_to_monitor, mongo_client):
+        self.client_to_monitor = client_to_monitor
+        self.mongo_client = mongo_client
+        self.db = None
+        self.cpu = 0.0
+        self.system_cpu = 0.0
+        self.previous_cpu = 0.0
+        self.previous_system_cpu = 0.0
+        self.cpu_percent = 0.0
+        self.memory = 0.0
+        self.memory_limit = 0.0
+        self.memory_percent = 0.0
+        self.disk_i = 0.0
+        self.disk_o = 0.0
+        self.rx_bytes = 0.0
+        self.tx_bytes = 0.0
 
-    cpu_delta = cpu - previous_cpu
-    system_delta = system_cpu - previous_system_cpu
+    @abstractmethod
+    def get_cpu_percent(self, data):
+        pass
 
-    if system_delta > 0.0 and cpu_delta > 0.0:
-        cpu_percent = (cpu_delta / system_delta) * percpu_len * 100
+    @abstractmethod
+    def get_memory(self, data):
+        pass
 
-    return cpu_percent
+    @abstractmethod
+    def get_disk_io(self, data):
+        pass
 
+    @abstractmethod
+    def get_network_throughput(self, data):
+        pass
 
-# Gets the memory data and returns the current memory usage, the limit of available memory and the percentage of memory usage
-def get_memory(data):
-    if data['memory_stats']['usage'] is not None:
-        memory = int(data['memory_stats']['usage'])
-    else:
-        memory = None
-    if data['memory_stats']['limit'] is not None:
-        memory_limit = int(data['memory_stats']['limit'])
-    else:
-        memory_limit = None
-
-    return {'memory': memory, 'memory_limit': memory_limit, 'memory_percent': 100 * memory / memory_limit}
+    @abstractmethod
+    def run_monitoring(self):
+        self.db = self.mongo_client.monitoring
 
 
-# Gets the disk I/O and returns both
-def get_disk_io(data):
-    if len(data['blkio_stats']['io_service_bytes_recursive']) >= 2:
-        disk_i = int(data['blkio_stats']['io_service_bytes_recursive'][0]['value'])
-    else:
-        disk_i = None
-    if len(data['blkio_stats']['io_service_bytes_recursive']) >= 2:
-        disk_o = int(data['blkio_stats']['io_service_bytes_recursive'][1]['value'])
-    else:
-        disk_o = None
+class DockerMonitoring(Monitoring):
 
-    return {'disk_i': disk_i, 'disk_o': disk_o}
+    def get_cpu_percent(self, data):
+        if data['cpu_stats']['cpu_usage']['total_usage'] is not None:
+            self.cpu = int(data['cpu_stats']['cpu_usage']['total_usage'])
+        if data['cpu_stats']['system_cpu_usage'] is not None:
+            self.system_cpu = int(data['cpu_stats']['system_cpu_usage'])
+        if data['precpu_stats']['cpu_usage']['total_usage'] is not None:
+            self.previous_cpu = int(data['precpu_stats']['cpu_usage']['total_usage'])
+        if data['precpu_stats']['system_cpu_usage'] is not None:
+            self.previous_system_cpu = int(data['precpu_stats']['system_cpu_usage'])
+        if data['cpu_stats']['cpu_usage']['percpu_usage'] is not None:
+            percpu_len = len(data['cpu_stats']['cpu_usage']['percpu_usage'])
+        else:
+            percpu_len = 1
 
+        cpu_delta = self.cpu - self.previous_cpu
+        system_delta = self.system_cpu - self.previous_system_cpu
 
-# Gets the rx and tx of the network and returns both
-def get_network_throughput(data):
-    if data['networks']['eth0']['rx_bytes'] is not None:
-        rx_bytes = int(data['networks']['eth0']['rx_bytes'])
-    else:
-        rx_bytes = None
-    if data['networks']['eth0']['tx_bytes'] is not None:
-        tx_bytes = int(data['networks']['eth0']['tx_bytes'])
-    else:
-        tx_bytes = None
+        if system_delta > 0.0 and cpu_delta > 0.0:
+            self.cpu_percent = (cpu_delta / system_delta) * percpu_len * 100
 
-    return {'rx': rx_bytes, 'tx': tx_bytes}
+        return self.cpu_percent
 
+    def get_memory(self, data):
+        if data['memory_stats']['usage'] is not None:
+            self.memory = int(data['memory_stats']['usage'])
+        if data['memory_stats']['limit'] is not None:
+            self.memory_limit = int(data['memory_stats']['limit'])
+        return {'memory': self.memory, 'memory_limit': self.memory_limit, 'memory_percent': 100 * self.memory / self.memory_limit}
 
-# Connect to the docker environment
-docker_client = docker.from_env()
+    def get_disk_io(self, data):
+        if len(data['blkio_stats']['io_service_bytes_recursive']) >= 2:
+            self.disk_i = int(data['blkio_stats']['io_service_bytes_recursive'][0]['value'])
+        if len(data['blkio_stats']['io_service_bytes_recursive']) >= 2:
+            self.disk_o = int(data['blkio_stats']['io_service_bytes_recursive'][1]['value'])
 
-# Connect to the MongoDB database
-client = pymongo.MongoClient("mongodb+srv://" + os.getenv("MONGODB_ID") + ":" + os.getenv("MONGODB_PW") + "@cluster0-wuhr3.mongodb.net/test?retryWrites=true&w=majority")
-db = client.monitoring
+        return {'disk_i': self.disk_i, 'disk_o': self.disk_o}
 
-exiting = False
+    def get_network_throughput(self, data):
+        if data['networks']['eth0']['rx_bytes'] is not None:
+            self.rx_bytes = int(data['networks']['eth0']['rx_bytes'])
+        if data['networks']['eth0']['tx_bytes'] is not None:
+            self.tx_bytes = int(data['networks']['eth0']['tx_bytes'])
 
+        return {'rx': self.rx_bytes, 'tx': self.tx_bytes}
 
-def run_monitoring(stream):
-    streaming = stream
-    while not exiting:
-        containers = docker_client.containers.list()
-        data_dict = {'date': datetime.datetime.utcnow()}
-        data_json = None
-        if streaming:
+    def run_monitoring(self):
+        super().run_monitoring()
+        while True:
             os.system("clear")
-            print("*** MONITORING STREAM ***")
-            print("==> Number of containers : {}".format(len(containers)))
-            print("______________________________________________________")
+            print("Monitoring is running")
+            containers = self.client_to_monitor.containers.list()
+            data_dict = {'date': datetime.datetime.utcnow()}
             for cont in containers:
                 cont_data_dict = cont.stats(decode=False, stream=False)
                 data_dict[cont.name] = {'short_id': cont.short_id,
-                                        'cpu': {'cpu_usage': get_cpu_percent(cont_data_dict)},
-                                        'memory': {'memory': get_memory(cont_data_dict)['memory'],
-                                                   'memory_limit': get_memory(cont_data_dict)['memory_limit'],
-                                                   'memory_percent': get_memory(cont_data_dict)['memory_percent']},
-                                        'disk': {'disk_i': get_disk_io(cont_data_dict)['disk_i'],
-                                                 'disk_o': get_disk_io(cont_data_dict)['disk_o']},
-                                        'network': {'rx': get_network_throughput(cont_data_dict)['rx'],
-                                                    'tx': get_network_throughput(cont_data_dict)['tx']}}
-
-                print("_ _ _ _ _ _ _ _ _ _ _ _ _ _ _")
-                print("Name : {} | Short ID : {} ".format(cont.name, cont.short_id))
-                print("CPU : {}%".format(get_cpu_percent(cont_data_dict)))
-                print("Memory/Limit : {}/{} Bytes | Memory % : {}%".format(get_memory(cont_data_dict)['memory'],
-                                                                           get_memory(cont_data_dict)['memory_limit'],
-                                                                           get_memory(cont_data_dict)['memory_percent']))
-                print("Disk I/O : {}/{} Bytes".format(get_disk_io(cont_data_dict)['disk_i'],
-                                                      get_disk_io(cont_data_dict)['disk_o']))
-
-                print("Network rx/tx : {}/{} Bytes".format(get_network_throughput(cont_data_dict)['rx'],
-                                                           get_network_throughput(cont_data_dict)['tx']))
-        else:
-            for cont in containers:
-                cont_data_dict = cont.stats(decode=False, stream=False)
-                data_dict[cont.name] = {'short_id': cont.short_id,
-                                        'cpu': {'cpu_usage': get_cpu_percent(cont_data_dict)},
-                                        'memory': {'memory': get_memory(cont_data_dict)['memory'],
-                                                   'memory_limit': get_memory(cont_data_dict)['memory_limit'],
-                                                   'memory_percent': get_memory(cont_data_dict)['memory_percent']},
-                                        'disk': {'disk_i': get_disk_io(cont_data_dict)['disk_i'],
-                                                 'disk_o': get_disk_io(cont_data_dict)['disk_o']},
-                                        'network': {'rx': get_network_throughput(cont_data_dict)['rx'],
-                                                    'tx': get_network_throughput(cont_data_dict)['tx']}}
-
-        # data_json = json.dumps(data_dict)
-        post = data_dict
-        db.containers_data.insert_one(post).inserted_id
-        '''print("\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _")
-        print("JSON text here : ")
-        print(data_json)'''
-        time.sleep(10)
+                                        'cpu': {'cpu_usage': self.get_cpu_percent(cont_data_dict)},
+                                        'memory': {'memory': self.get_memory(cont_data_dict)['memory'],
+                                                   'memory_limit': self.get_memory(cont_data_dict)['memory_limit'],
+                                                   'memory_percent': self.get_memory(cont_data_dict)['memory_percent']},
+                                        'disk': {'disk_i': self.get_disk_io(cont_data_dict)['disk_i'],
+                                                 'disk_o': self.get_disk_io(cont_data_dict)['disk_o']},
+                                        'network': {'rx': self.get_network_throughput(cont_data_dict)['rx'],
+                                                    'tx': self.get_network_throughput(cont_data_dict)['tx']}}
+            post = data_dict
+            self.db.containers.insert_one(post).inserted_id
+            print("Containers data stored"
+                  "______________________")
+            time.sleep(10)
 
 
-def main():
-    print("*** MONITORING ***")
-    print("Do you want to see stream of the monitoring ?")
-    answer = False
-    while answer is False:
-        x = input("y/n : ")
-        if x == "y":
-            answer = True
-            os.system("clear")
-            run_monitoring(True)
-        elif x == "n":
-            answer = True
-            os.system("clear")
-            run_monitoring(False)
-        else:
-            print("Please enter y for yes or n for no.")
-            time.sleep(1)
+x = DockerMonitoring(docker.from_env(), pymongo.MongoClient("mongodb://" + os.getenv("MONGODB_ID") + ":" + os.getenv("MONGODB_PW") + "@127.0.0.1"))
+x.run_monitoring()
 
 
-if __name__ == '__main__':
-    main()
+class KubernetesMonitoring(Monitoring):
+
+    def get_cpu_percent(self, data):
+        pass
+
+    def get_memory(self, data):
+        pass
+
+    def get_disk_io(self, data):
+        pass
+
+    def get_network_throughput(self, data):
+        pass
+
+    def run_monitoring(self):
+        pass
