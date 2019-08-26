@@ -6,11 +6,7 @@ def planning(alert):
     return switcher.get(alert, "Invalid alert")
 
 
-print(planning(2))
-print(planning(1))
-print(planning(3))
-
 
 class Planning:
     def __init__(self):
-        pass
+        self.decision = 0

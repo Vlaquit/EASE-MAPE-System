@@ -1,6 +1,8 @@
 import datetime
 import os
 import time
+from flask import Flask, request, jsonify, g
+
 from abc import ABC, abstractmethod
 
 import docker
@@ -116,14 +118,15 @@ class DockerMonitoring(Monitoring):
                                                  'disk_o': self.get_disk_io(cont_data_dict)['disk_o']},
                                         'network': {'rx': self.get_network_throughput(cont_data_dict)['rx'],
                                                     'tx': self.get_network_throughput(cont_data_dict)['tx']}}
-            post = data_dict
-            self.db.containers.insert_one(post).inserted_id
-            print("Containers data stored"
+
+            self.db.containers.insert(data_dict)
+            print("Containers data stored\n"
                   "______________________")
             time.sleep(10)
 
 
-x = DockerMonitoring(docker.from_env(), pymongo.MongoClient("mongodb://" + os.getenv("MONGODB_ID") + ":" + os.getenv("MONGODB_PW") + "@127.0.0.1"))
+x = DockerMonitoring(docker.from_env(), pymongo.MongoClient("mongodb://root:password@localhost:27017/"))
+
 x.run_monitoring()
 
 

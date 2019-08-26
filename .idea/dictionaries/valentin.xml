@@ -3,6 +3,7 @@
     <words>
       <w>blkio</w>
       <w>percpu</w>
+      <w>pymongo</w>
     </words>
   </dictionary>
 </component>
