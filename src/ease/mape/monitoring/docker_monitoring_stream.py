@@ -2,7 +2,6 @@ import os
 import time
 
 import docker
-
 from old.monitoring_old import get_containers, get_cpu_percent, get_memory, get_disk_io, get_network_throughput
 
 

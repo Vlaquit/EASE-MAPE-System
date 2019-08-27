@@ -1,13 +1,10 @@
 import datetime
 import os
 import time
-from flask import Flask, request, jsonify, g
-
 from abc import ABC, abstractmethod
 
 import docker
 import pymongo
-
 from dotenv import load_dotenv
 
 # Get environment variable
@@ -104,7 +101,7 @@ class DockerMonitoring(Monitoring):
         super().run_monitoring()
         while True:
             os.system("clear")
-            print("Monitoring is running")
+            print("Monitoring is running\n")
             containers = self.client_to_monitor.containers.list()
             data_dict = {'date': datetime.datetime.utcnow()}
             for cont in containers:
@@ -121,7 +118,7 @@ class DockerMonitoring(Monitoring):
 
             self.db.containers.insert(data_dict)
             print("Containers data stored\n"
-                  "______________________")
+                  "---- Sleep 10 sec ----")
             time.sleep(10)
 
 

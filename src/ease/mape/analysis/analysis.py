@@ -1,9 +1,7 @@
 import os
-import time
+from abc import ABC, abstractmethod
 
 import pymongo
-
-from abc import ABC, abstractmethod
 from dotenv import load_dotenv
 
 # Get environment variable
@@ -22,10 +20,14 @@ class Analysis(ABC):
     @abstractmethod
     def get_data_analysed(self):
         self.db = self.mongo_client.monitoring
-        print(self.db)
 
 
 class ThresholdAnalysis(Analysis):
+    def __init__(self, mongo_client):
+        super().__init__(mongo_client)
+        self.result_list = []
+        self.result_list_temp = []
+
     def cpu_analyse(self, value):
         super().cpu_analyse(self)
         if value > float(os.getenv("CPU_UPPER_THRESHOLD")):
@@ -35,25 +37,30 @@ class ThresholdAnalysis(Analysis):
         else:
             return 0
 
+    def get_result_list(self):
+        return self.result_list
+
     def get_data_analysed(self):
         super().get_data_analysed()
-        while True:
-            last_data = self.db.containers.find_one(sort=[('_id', pymongo.DESCENDING)])
-            data_items = list(last_data.items())
-            for i in range(2, len(data_items)):
-                print("Container n° : {}/{}".format(i - 1, len(data_items) - 2))
-                print("CPU %: {:5.2f}".format(data_items[i][1].get("cpu").get("cpu_usage")))
-                print("Result: {} \n".format(self.cpu_analyse(data_items[i][1].get("cpu").get("cpu_usage"))))
-            print("________________")
-
-            time.sleep(10)
-
-
-x = ThresholdAnalysis(pymongo.MongoClient("mongodb://root:password@localhost:27017/"))
-x.get_data_analysed()
+        last_data = self.db.containers.find_one(sort=[('_id', pymongo.DESCENDING)])
+        data_items = list(last_data.items())
+        self.result_list_temp.clear()
+        for i in range(2, len(data_items)):
+            # print("Container n° : {}/{}".format(i - 1, len(data_items) - 2))
+            # print("CPU %: {:5.2f}".format(data_items[i][1].get("cpu").get("cpu_usage")))
+            # print("Result: {} \n".format(self.cpu_analyse(data_items[i][1].get("cpu").get("cpu_usage"))))
+            self.result_list_temp.append(self.cpu_analyse(data_items[i][1].get("cpu").get("cpu_usage")))
+        self.result_list = self.result_list_temp
+        print("________________")
+        print("Analyse: Done !")
 
 
-class ModelAnalysis(Analysis):
+#
+# x = ThresholdAnalysis(pymongo.MongoClient("mongodb://root:password@localhost:27017/"))
+# x.get_data_analysed()
+
+
+class LinearModelAnalysis(Analysis):
     def cpu_analyse(self, value):
         pass
 
