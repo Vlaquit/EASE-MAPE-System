@@ -58,8 +58,8 @@ class ThresholdAnalysis(Analysis):
 
 
 #
-x = ThresholdAnalysis(pymongo.MongoClient("mongodb://root:password@localhost:27017/"))
-x.get_data_analysed()
+# x = ThresholdAnalysis(pymongo.MongoClient("mongodb://root:password@localhost:27017/"))
+# x.get_data_analysed()
 
 
 class LinearModelAnalysis(Analysis):

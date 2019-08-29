@@ -1,14 +1,24 @@
 import time
+from abc import ABC, abstractmethod
 
 
-class Planning:
+class Planning(ABC):
     def __init__(self, analysis):
         self.decision = 0
-        self.containters_to_scale = []
         self.analysis = analysis
 
     def get_decision(self):
         return self.decision
+
+    @abstractmethod
+    def run_planning(self):
+        pass
+
+
+class DockerPlanning(Planning):
+    def __init__(self, analysis):
+        super().__init__(analysis)
+        self.containters_to_scale = []
 
     def get_container_to_scale(self):
         return self.containters_to_scale

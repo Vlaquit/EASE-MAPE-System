@@ -121,9 +121,12 @@ class DockerMonitoring(Monitoring):
 
             self.db.containers.insert(data_dict)
             t2 = time.time()
-            self.delay = t2 - t1
-            print(self.delay)
-            print("Containers data stored\n---- Sleep 10 sec ----")
+            self.delay = float(t2 - t1)
+            self.db.dockermonitoringlogs.insert({"date": datetime.datetime.utcnow(),
+                                                 "nb of containers": len(containers),
+                                                 "response time": self.delay})
+            print("Containers data stored in {:.2f} sec\n".format(self.delay))
+            print("---- Sleep 10 sec ----")
             time.sleep(10)
 
 

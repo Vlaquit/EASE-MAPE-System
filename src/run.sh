@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python3 ease/mape/monitoring/monitoring.py && python3 ease/mape/analysis_planning.py
+python3 src/ease/mape/monitoring/monitoring.py && python3 src/ease/mape/main.py
