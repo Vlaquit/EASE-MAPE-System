@@ -28,6 +28,7 @@ class Monitoring(ABC):
         self.disk_o = 0.0
         self.rx_bytes = 0.0
         self.tx_bytes = 0.0
+        self.delay = 0.0
 
     @abstractmethod
     def get_cpu_percent(self, data):
@@ -102,6 +103,8 @@ class DockerMonitoring(Monitoring):
         while True:
             os.system("clear")
             print("Monitoring is running\n")
+            self.delay = 0.0
+            t1 = time.time()
             containers = self.client_to_monitor.containers.list()
             data_dict = {'date': datetime.datetime.utcnow()}
             for cont in containers:
@@ -117,8 +120,10 @@ class DockerMonitoring(Monitoring):
                                                     'tx': self.get_network_throughput(cont_data_dict)['tx']}}
 
             self.db.containers.insert(data_dict)
-            print("Containers data stored\n"
-                  "---- Sleep 10 sec ----")
+            t2 = time.time()
+            self.delay = t2 - t1
+            print(self.delay)
+            print("Containers data stored\n---- Sleep 10 sec ----")
             time.sleep(10)
 
 
