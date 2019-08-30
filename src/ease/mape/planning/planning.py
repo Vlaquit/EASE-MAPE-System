@@ -19,27 +19,35 @@ class DockerPlanning(Planning):
     def __init__(self, analysis):
         super().__init__(analysis)
         self.containters_to_scale = []
+        self.number_of_containers = 0
+
+    def get_number_of_containers(self):
+        return self.number_of_containers
 
     def get_container_to_scale(self):
         return self.containters_to_scale
 
     def run_planning(self):
         self.decision = 0
+        self.number_of_containers = 0
         for key, value in self.analysis.get_result_dict().items():
             for val in value:
                 value = val
-            if value == 1:
+            if "web" in key:
+                self.number_of_containers += 1
+            if value == 1 and "web" in key:
                 self.decision += 1
                 self.containters_to_scale.append(key)
-            elif value == 2:
+            elif value == 2 and "web" in key:
                 self.decision -= 1
                 self.containters_to_scale.append(key)
+
         if self.get_decision() > 0:
-            # print("Add {} containers".format(self.get_decision()))
-            print("scale up")
+            print("Current number of containers : %d" % self.get_number_of_containers())
+            print("scale up to {} containers ".format(self.get_number_of_containers() + self.get_decision()))
         elif self.get_decision() < 0:
-            # print("Remove {} containers".format(- self.get_decision()))
-            print("scale down")
+            print("Current number of containers : %d" % self.get_number_of_containers())
+            print("scale down to {} containers ".format(self.get_number_of_containers() + self.get_decision()))
         else:
+            print("Current number of containers : %d" % self.get_number_of_containers())
             print("NTR")
-        time.sleep(5)

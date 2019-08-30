@@ -41,6 +41,7 @@ class ThresholdAnalysis(Analysis):
         return self.result_dict
 
     def get_data_analysed(self):
+        os.system("clear")
         super().get_data_analysed()
         last_data = self.db.containers.find_one(sort=[('_id', pymongo.DESCENDING)])
         data_items = list(last_data.items())

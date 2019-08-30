@@ -16,6 +16,7 @@ class Monitoring(ABC):
         self.client_to_monitor = client_to_monitor
         self.mongo_client = mongo_client
         self.db = None
+        self.run = True
         self.cpu = 0.0
         self.system_cpu = 0.0
         self.previous_cpu = 0.0
@@ -98,41 +99,43 @@ class DockerMonitoring(Monitoring):
 
         return {'rx': self.rx_bytes, 'tx': self.tx_bytes}
 
+    def set_run(self, run):
+        self.run = run
+
     def run_monitoring(self):
         super().run_monitoring()
         while True:
-            os.system("clear")
-            print("Monitoring is running\n")
-            self.delay = 0.0
-            t1 = time.time()
-            containers = self.client_to_monitor.containers.list()
-            data_dict = {'date': datetime.datetime.utcnow()}
-            for cont in containers:
-                cont_data_dict = cont.stats(decode=False, stream=False)
-                data_dict[cont.name] = {'short_id': cont.short_id,
-                                        'cpu': {'cpu_usage': self.get_cpu_percent(cont_data_dict)},
-                                        'memory': {'memory': self.get_memory(cont_data_dict)['memory'],
-                                                   'memory_limit': self.get_memory(cont_data_dict)['memory_limit'],
-                                                   'memory_percent': self.get_memory(cont_data_dict)['memory_percent']},
-                                        'disk': {'disk_i': self.get_disk_io(cont_data_dict)['disk_i'],
-                                                 'disk_o': self.get_disk_io(cont_data_dict)['disk_o']},
-                                        'network': {'rx': self.get_network_throughput(cont_data_dict)['rx'],
-                                                    'tx': self.get_network_throughput(cont_data_dict)['tx']}}
+            if self.run:
+                os.system("clear")
+                print("Monitoring is running\n")
+                self.delay = 0.0
+                t1 = time.time()
+                containers = self.client_to_monitor.containers.list()
+                data_dict = {'date': datetime.datetime.utcnow()}
+                for cont in containers:
+                    cont_data_dict = cont.stats(decode=False, stream=False)
+                    data_dict[cont.name] = {'short_id': cont.short_id,
+                                            'cpu': {'cpu_usage': self.get_cpu_percent(cont_data_dict)},
+                                            'memory': {'memory': self.get_memory(cont_data_dict)['memory'],
+                                                       'memory_limit': self.get_memory(cont_data_dict)['memory_limit'],
+                                                       'memory_percent': self.get_memory(cont_data_dict)['memory_percent']},
+                                            'disk': {'disk_i': self.get_disk_io(cont_data_dict)['disk_i'],
+                                                     'disk_o': self.get_disk_io(cont_data_dict)['disk_o']},
+                                            'network': {'rx': self.get_network_throughput(cont_data_dict)['rx'],
+                                                        'tx': self.get_network_throughput(cont_data_dict)['tx']}}
 
-            self.db.containers.insert(data_dict)
-            t2 = time.time()
-            self.delay = float(t2 - t1)
-            self.db.dockermonitoringlogs.insert({"date": datetime.datetime.utcnow(),
-                                                 "nb of containers": len(containers),
-                                                 "response time": self.delay})
-            print("Containers data stored in {:.2f} sec\n".format(self.delay))
-            print("---- Sleep 10 sec ----")
-            time.sleep(10)
+                self.db.containers.insert(data_dict)
+                t2 = time.time()
+                self.delay = float(t2 - t1)
+                self.db.dockermonitoringlogs.insert({"date": datetime.datetime.utcnow(),
+                                                     "nb of containers": len(containers),
+                                                     "response time": self.delay})
+                print("Containers data stored in {:.2f} sec\n".format(self.delay))
+                print("---- Sleep 10 sec ----")
+                time.sleep(5)
+            else:
+                print("Wait for execution done")
 
-
-x = DockerMonitoring(docker.from_env(), pymongo.MongoClient("mongodb://root:password@localhost:27017/"))
-
-x.run_monitoring()
 
 
 class KubernetesMonitoring(Monitoring):
