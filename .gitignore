@@ -130,3 +130,4 @@ Supprimerait src/ease/mape/monitoring/__pycache__/
 /iot-docker-mongoDB/
 !/src/ease/mape/monitoring/average_cpu.py
 /src/old/
+.idea
