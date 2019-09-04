@@ -4,3 +4,4 @@ We want to develop a MAPE framework. Being a framework, we want the components o
 
 **Monitoring algorithm**
 Python version : 3.6
+

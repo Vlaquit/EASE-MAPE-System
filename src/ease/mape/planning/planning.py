@@ -1,4 +1,3 @@
-import time
 from abc import ABC, abstractmethod
 
 
@@ -16,38 +15,28 @@ class Planning(ABC):
 
 
 class DockerPlanning(Planning):
-    def __init__(self, analysis):
-        super().__init__(analysis)
-        self.containters_to_scale = []
-        self.number_of_containers = 0
 
-    def get_number_of_containers(self):
-        return self.number_of_containers
-
-    def get_container_to_scale(self):
-        return self.containters_to_scale
+    def get_nb_containers(self):
+        return self.analysis.get_nb_containers()
 
     def run_planning(self):
         self.decision = 0
-        self.number_of_containers = 0
-        for key, value in self.analysis.get_result_dict().items():
-            for val in value:
-                value = val
-            if "web" in key:
-                self.number_of_containers += 1
-            if value == 1 and "web" in key:
+        for value in self.analysis.get_result_list():
+            if value == 1:
                 self.decision += 1
-                self.containters_to_scale.append(key)
-            elif value == 2 and "web" in key:
+            elif value == 2:
                 self.decision -= 1
-                self.containters_to_scale.append(key)
 
         if self.get_decision() > 0:
-            print("Current number of containers : %d" % self.get_number_of_containers())
-            print("scale up to {} containers ".format(self.get_number_of_containers() + 1))
+            print("Current number of containers : %d" % self.get_nb_containers())
+            print("Scale up to {} containers ".format(self.get_nb_containers() + 1))
         elif self.get_decision() < 0:
-            print("Current number of containers : %d" % self.get_number_of_containers())
-            print("scale down to {} containers ".format(self.get_number_of_containers() - 1))
+            print("Current number of containers : %d" % self.get_nb_containers())
+            if self.get_nb_containers() - 1 < 1:
+                print("Scale down to 1 containers ")
+            else:
+                print("Scale down to {} containers ".format(self.get_nb_containers() - 1))
+
         else:
-            print("Current number of containers : %d" % self.get_number_of_containers())
+            print("Current number of containers : %d" % self.get_nb_containers())
             print("NTR")

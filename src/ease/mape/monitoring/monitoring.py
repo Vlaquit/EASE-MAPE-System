@@ -50,9 +50,13 @@ class Monitoring(ABC):
     @abstractmethod
     def run_monitoring(self):
         self.db = self.mongo_client.monitoring
+        # self.db.containers.drop()
 
 
 class DockerMonitoring(Monitoring):
+    def __init__(self, client_to_monitor, mongo_client):
+        super().__init__(client_to_monitor, mongo_client)
+        self.nb_containers = 0
 
     def get_cpu_percent(self, data):
         if data['cpu_stats']['cpu_usage']['total_usage'] is not None:
@@ -103,42 +107,57 @@ class DockerMonitoring(Monitoring):
         self.run = run
 
     def run_monitoring(self):
+
+        self.nb_containers = 0
+        self.delay = 0.0
+
+        if self.run:
+            os.system("clear")
+            print("Monitoring is running\n")
+
+            t1 = time.time()
+
+            containers = self.client_to_monitor.containers.list()
+
+            container_data = {'date': datetime.datetime.utcnow(), 'nb_of_containers': 0}
+
+            for cont in containers:
+                name = cont.name.split('_')
+
+                if "web" in name[1]:
+                    self.nb_containers += 1
+                    container_stats = cont.stats(decode=False, stream=False)
+                    container_data[cont.name] = {'short_id': cont.short_id,
+                                                 'cpu': {'cpu_usage': self.get_cpu_percent(container_stats)},
+                                                 'memory': {'memory': self.get_memory(container_stats)['memory'],
+                                                            'memory_limit': self.get_memory(container_stats)['memory_limit'],
+                                                            'memory_percent': self.get_memory(container_stats)['memory_percent']},
+                                                 'disk': {'disk_i': self.get_disk_io(container_stats)['disk_i'],
+                                                          'disk_o': self.get_disk_io(container_stats)['disk_o']},
+                                                 'network': {'rx': self.get_network_throughput(container_stats)['rx'],
+                                                             'tx': self.get_network_throughput(container_stats)['tx']}}
+
+            container_data['nb_of_containers'] = self.nb_containers
+
+            self.db.containers.insert(container_data)
+
+            t2 = time.time()
+            self.delay = float(t2 - t1)
+
+            print("Containers data stored in {:.2f} sec\n".format(self.delay))
+            print("---- Sleep 5 sec ----")
+            time.sleep(5)
+        else:
+            print("Wait for execution done")
+            time.sleep(15)
+
+    def main(self):
         super().run_monitoring()
-        self.db.containers.drop()
         while True:
-            nb = 0
-            if self.run:
-                os.system("clear")
-                print("Monitoring is running\n")
-                self.delay = 0.0
-                t1 = time.time()
-                containers = self.client_to_monitor.containers.list()
-                data_dict = {'date': datetime.datetime.utcnow()}
-                for cont in containers:
-                    if "web" in cont.name:
-                        nb += 1
-                        cont_data_dict = cont.stats(decode=False, stream=False)
-                        data_dict[cont.name] = {'short_id': cont.short_id,
-                                                'cpu': {'cpu_usage': self.get_cpu_percent(cont_data_dict)},
-                                                'memory': {'memory': self.get_memory(cont_data_dict)['memory'],
-                                                           'memory_limit': self.get_memory(cont_data_dict)['memory_limit'],
-                                                           'memory_percent': self.get_memory(cont_data_dict)['memory_percent']},
-                                                'disk': {'disk_i': self.get_disk_io(cont_data_dict)['disk_i'],
-                                                         'disk_o': self.get_disk_io(cont_data_dict)['disk_o']},
-                                                'network': {'rx': self.get_network_throughput(cont_data_dict)['rx'],
-                                                            'tx': self.get_network_throughput(cont_data_dict)['tx']}}
-                data_dict['nb_of_containers'] = nb
-                self.db.containers.insert(data_dict)
-                t2 = time.time()
-                self.delay = float(t2 - t1)
-                print("Containers data stored in {:.2f} sec\n".format(self.delay))
-                print("---- Sleep 5 sec ----")
-                time.sleep(5)
-            else:
-                print("Wait for execution done")
+            self.run_monitoring()
 
 
-
+# TODO
 class KubernetesMonitoring(Monitoring):
 
     def get_cpu_percent(self, data):
@@ -155,3 +174,8 @@ class KubernetesMonitoring(Monitoring):
 
     def run_monitoring(self):
         pass
+
+
+if __name__ == "__main__":
+    docker_monitoring = DockerMonitoring(docker.from_env(), pymongo.MongoClient(os.getenv("URI")))
+    docker_monitoring.main()
