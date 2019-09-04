@@ -46,24 +46,29 @@ class ThresholdAnalysis(Analysis):
         last_data = self.db.containers.find_one(sort=[('_id', pymongo.DESCENDING)])
         data_items = list(last_data.items())
         self.result_dict_temp = {}
-        for i in range(2, len(data_items)):
-            # print("Container n° : {}/{}".format(i - 1, len(data_items) - 2))
-            # print("CPU %: {:5.2f}".format(data_items[i][1].get("cpu").get("cpu_usage")))
-            # print("Result: {} \n".format(self.cpu_analyse(data_items[i][1].get("cpu").get("cpu_usage"))))
+        for i in range(2, len(data_items) - 1):
             cont_name = str(data_items[i][0])
             self.result_dict_temp[cont_name] = {self.cpu_analyse(data_items[i][1].get("cpu").get("cpu_usage"))}
         self.result_dict = self.result_dict_temp
-        # print(self.result_dict)
         print("________________")
         print("Analyse: Done !")
 
 
-#
-# x = ThresholdAnalysis(pymongo.MongoClient("mongodb://root:password@localhost:27017/"))
-# x.get_data_analysed()
-
-
 class LinearModelAnalysis(Analysis):
+    def __init__(self):
+        self.capacity = 2.5
+
+    def get_requests(self):
+        pass
+
+    def set_capacity(self, cpu, precision, maximum):
+        if maximum > 1 or maximum < 0:
+            raise Exception("the maximum value must be between 0 and 1")
+        self.capacity = 0
+        for i in range(1, precision):
+            self.capacity += self.get_requests() / cpu
+        self.capacity = self.capacity * maximum / precision
+
     def cpu_analyse(self, value):
         pass
 

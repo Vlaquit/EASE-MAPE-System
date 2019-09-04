@@ -44,10 +44,10 @@ class DockerPlanning(Planning):
 
         if self.get_decision() > 0:
             print("Current number of containers : %d" % self.get_number_of_containers())
-            print("scale up to {} containers ".format(self.get_number_of_containers() + self.get_decision()))
+            print("scale up to {} containers ".format(self.get_number_of_containers() + 1))
         elif self.get_decision() < 0:
             print("Current number of containers : %d" % self.get_number_of_containers())
-            print("scale down to {} containers ".format(self.get_number_of_containers() + self.get_decision()))
+            print("scale down to {} containers ".format(self.get_number_of_containers() - 1))
         else:
             print("Current number of containers : %d" % self.get_number_of_containers())
             print("NTR")

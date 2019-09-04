@@ -21,7 +21,7 @@ class DockerScale(Execution):
 
     def scale(self):
         if self.planning.get_decision() > 0:
-            if self.planning.get_number_of_containers() >= 10:
+            if self.planning.get_number_of_containers() >= 15:
                 print("Maximum number of containers reached")
             else:
                 os.system("docker-compose -f /home/valentin/Documents/Stage/iot-docker-mongoDB/docker-compose.yml up -d --scale web=%d" % (
