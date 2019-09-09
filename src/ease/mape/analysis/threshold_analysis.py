@@ -50,7 +50,10 @@ class DockerThresholdAnalysis(ThresholdAnalysis):
         self.result_list_temp = []
         for i in range(3, len(data_items)):
             self.result_list_temp.append(cpu_analyse(data_items[i][1].get("cpu").get("cpu_usage")))
-        self.result_list = self.result_list_temp
+        if self.result_list_temp == self.result_list:
+            self.result_list = [-1]
+        else:
+            self.result_list = self.result_list_temp
         print("Done")
         print("CPU threshold :\n"
               "Upper = {}\n"

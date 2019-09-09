@@ -26,6 +26,8 @@ class DockerPlanning(Planning):
                 self.decision += 1
             elif value == 2:
                 self.decision -= 1
+            elif value == -1:
+                self.decision = None
 
         if self.get_decision() > 0:
             print("Current number of containers : %d" % self.get_nb_containers())
@@ -37,6 +39,8 @@ class DockerPlanning(Planning):
             else:
                 print("Scale down to {} containers ".format(self.get_nb_containers() - 1))
 
-        else:
+        elif self.decision == 0:
             print("Current number of containers : %d" % self.get_nb_containers())
             print("NTR")
+        elif self.decision == None:
+            print("Wait for monitoring data")
