@@ -131,3 +131,5 @@ Supprimerait src/ease/mape/monitoring/__pycache__/
 !/src/ease/mape/monitoring/average_cpu.py
 /src/old/
 .idea
+!/test/
+!/id_rsa

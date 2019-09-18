@@ -1,3 +1,5 @@
+import os
+
 import pymongo
 import sys
 
@@ -9,13 +11,14 @@ from ease.mape.execution.execution import DockerScale
 
 
 def main():
-    analyse = DockerThresholdAnalysis(pymongo.MongoClient("mongodb://root:password@localhost:27017/"))
-    plan = DockerPlanning(analyse)
-    execute = DockerScale(plan)
+    analyse = DockerThresholdAnalysis(pymongo.MongoClient(os.getenv("URI")))
+    plan = DockerPlanning()
+    execution = DockerScale()
+    analyse.attach(plan)
+    plan.attach(execution)
+
     while True:
         analyse.run_analysis()
-        plan.run_planning()
-        execute.scale()
 
 
 if __name__ == "__main__":

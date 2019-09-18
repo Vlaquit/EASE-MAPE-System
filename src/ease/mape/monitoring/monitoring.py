@@ -52,6 +52,10 @@ class Monitoring(ABC):
         self.db = self.mongo_client.monitoring
         # self.db.containers.drop()
 
+    @abstractmethod
+    def make_break(self):
+        pass
+
 
 class DockerMonitoring(Monitoring):
     def __init__(self, client_to_monitor, mongo_client):
@@ -103,21 +107,21 @@ class DockerMonitoring(Monitoring):
 
         return {'rx': self.rx_bytes, 'tx': self.tx_bytes}
 
-    def set_run(self, run):
-        self.run = run
+    def make_break(self):
+        self.run = not self.run
 
     def run_monitoring(self):
 
         self.nb_containers = 0
         self.delay = 0.0
+        os.system("clear")
+        print("Monitoring is running\n")
 
+        t1 = time.time()
+
+        containers = self.client_to_monitor.containers.list()
         if self.run:
-            os.system("clear")
-            print("Monitoring is running\n")
 
-            t1 = time.time()
-
-            containers = self.client_to_monitor.containers.list()
 
             container_data = {'date': datetime.datetime.utcnow(), 'nb_of_containers': 0}
 

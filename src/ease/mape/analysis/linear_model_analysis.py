@@ -15,7 +15,7 @@ class LinearModelAnalysis(ABC):
         pass
 
     @abstractmethod
-    def set_capacity(self, cpu, precision, maximum):
+    def set_capacity(self, precision, maximum):
         pass
 
     @abstractmethod
@@ -27,13 +27,16 @@ class DockerLinearModelAnalysis(LinearModelAnalysis):
     def get_requests(self):
         pass
 
-    def set_capacity(self, cpu, precision, maximum):
+    def set_capacity(self, precision, maximum):
         if maximum > 1 or maximum < 0:
             raise Exception("the maximum value must be between 0 and 1")
         self.capacity = 0
         for i in range(1, precision):
-            self.capacity += self.get_requests() / cpu
+            self.capacity += self.get_requests() / self.get_cpu()
         self.capacity = self.capacity * maximum / precision
 
     def run_analysis(self):
+        pass
+
+    def get_cpu(self):
         pass
