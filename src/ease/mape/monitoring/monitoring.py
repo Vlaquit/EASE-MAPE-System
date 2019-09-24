@@ -122,7 +122,6 @@ class DockerMonitoring(Monitoring):
         containers = self.client_to_monitor.containers.list()
         if self.run:
 
-
             container_data = {'date': datetime.datetime.utcnow(), 'nb_of_containers': 0}
 
             for cont in containers:
@@ -130,16 +129,19 @@ class DockerMonitoring(Monitoring):
 
                 if "web" in name[1]:
                     self.nb_containers += 1
-                    container_stats = cont.stats(decode=False, stream=False)
-                    container_data[cont.name] = {'short_id': cont.short_id,
-                                                 'cpu': {'cpu_usage': self.get_cpu_percent(container_stats)},
-                                                 'memory': {'memory': self.get_memory(container_stats)['memory'],
-                                                            'memory_limit': self.get_memory(container_stats)['memory_limit'],
-                                                            'memory_percent': self.get_memory(container_stats)['memory_percent']},
-                                                 'disk': {'disk_i': self.get_disk_io(container_stats)['disk_i'],
-                                                          'disk_o': self.get_disk_io(container_stats)['disk_o']},
-                                                 'network': {'rx': self.get_network_throughput(container_stats)['rx'],
-                                                             'tx': self.get_network_throughput(container_stats)['tx']}}
+                    try:
+                        container_stats = cont.stats(decode=False, stream=False)
+                        container_data[cont.name] = {'short_id': cont.short_id,
+                                                     'cpu': {'cpu_usage': self.get_cpu_percent(container_stats)},
+                                                     'memory': {'memory': self.get_memory(container_stats)['memory'],
+                                                                'memory_limit': self.get_memory(container_stats)['memory_limit'],
+                                                                'memory_percent': self.get_memory(container_stats)['memory_percent']},
+                                                     'disk': {'disk_i': self.get_disk_io(container_stats)['disk_i'],
+                                                              'disk_o': self.get_disk_io(container_stats)['disk_o']},
+                                                     'network': {'rx': self.get_network_throughput(container_stats)['rx'],
+                                                                 'tx': self.get_network_throughput(container_stats)['tx']}}
+                    except:
+                        pass
 
             container_data['nb_of_containers'] = self.nb_containers
 
@@ -165,6 +167,9 @@ class DockerMonitoring(Monitoring):
 class KubernetesMonitoring(Monitoring):
 
     def get_cpu_percent(self, data):
+        pass
+
+    def make_break(self):
         pass
 
     def get_memory(self, data):

@@ -49,7 +49,7 @@ class DockerPlanning(Planning):
             print("Scale up to {} containers ".format(self.nb_containers + 1))
         elif self.decision < 0:
             print("Current number of containers : %d" % self.nb_containers)
-            if self.nb_containers - 1 < 1:
+            if self.nb_containers - 1 <= 1:
                 print("Scale down to 1 containers ")
             else:
                 print("Scale down to {} containers ".format(self.nb_containers - 1))

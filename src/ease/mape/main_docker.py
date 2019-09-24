@@ -16,7 +16,6 @@ def main():
     execution = DockerScale()
     analyse.attach(plan)
     plan.attach(execution)
-
     while True:
         analyse.run_analysis()
 
