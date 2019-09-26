@@ -31,7 +31,7 @@ class DockerScale(Execution):
         # self.notify()
         if planning.decision > 0:
 
-            if planning.nb_containers >= 15:
+            if planning.nb_containers >= 8:
                 print("Maximum number of containers reached")
             else:
                 os.system("docker-compose -f {} up -d --scale web={}".format(os.getenv("DOCKER_COMPOSE_FILE_DIRECTORY"),

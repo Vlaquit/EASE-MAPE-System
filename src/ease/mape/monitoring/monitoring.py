@@ -5,6 +5,12 @@ from abc import ABC, abstractmethod
 
 import docker
 import pymongo
+import csv
+
+import pytz
+from numpy import mean
+
+
 from dotenv import load_dotenv
 
 # Get environment variable
@@ -61,6 +67,7 @@ class DockerMonitoring(Monitoring):
     def __init__(self, client_to_monitor, mongo_client):
         super().__init__(client_to_monitor, mongo_client)
         self.nb_containers = 0
+        self.csv_file = None
 
     def get_cpu_percent(self, data):
         if data['cpu_stats']['cpu_usage']['total_usage'] is not None:
@@ -110,6 +117,11 @@ class DockerMonitoring(Monitoring):
     def make_break(self):
         self.run = not self.run
 
+    def export_to_csv(self, csv_file, data):
+        data['date'] = data['date'].strftime('%B %d %Y - %H:%M:%S')
+
+        pass
+
     def run_monitoring(self):
 
         self.nb_containers = 0
@@ -122,8 +134,12 @@ class DockerMonitoring(Monitoring):
         containers = self.client_to_monitor.containers.list()
         if self.run:
 
-            container_data = {'date': datetime.datetime.utcnow(), 'nb_of_containers': 0}
+            container_data = {'date': datetime.datetime.now(pytz.timezone('America/Montreal')), 'nb_of_containers': 0}
 
+            list_cpu = []
+            list_mem = []
+            list_disk_i = []
+            list_disk_o = []
             for cont in containers:
                 name = cont.name.split('_')
 
@@ -140,9 +156,29 @@ class DockerMonitoring(Monitoring):
                                                               'disk_o': self.get_disk_io(container_stats)['disk_o']},
                                                      'network': {'rx': self.get_network_throughput(container_stats)['rx'],
                                                                  'tx': self.get_network_throughput(container_stats)['tx']}}
+
+                        list_cpu.append(container_data[cont.name].get("cpu").get("cpu_usage"))
+                        list_mem.append(container_data[cont.name]['memory']['memory_percent'])
+                        list_disk_i.append(container_data[cont.name]['disk']['disk_i'])
+                        list_disk_o.append(container_data[cont.name]['disk']['disk_o'])
+
                     except:
                         pass
 
+            cpu_average = round(mean(list_cpu), 2)
+            mem_average = round(mean(list_mem), 2)
+            disk_i_average = round(mean(list_disk_i), 2)
+            disk_o_average = round(mean(list_disk_o), 2)
+
+            with open('csv_file.csv', 'a') as f:
+                writer = csv.writer(f)
+                writer.writerow([container_data['date'].strftime('%H:%M:%S'),
+                                 cpu_average,
+                                 mem_average,
+                                 disk_i_average,
+                                 disk_o_average,
+                                 self.nb_containers
+                                 ])
             container_data['nb_of_containers'] = self.nb_containers
 
             self.db.containers.insert(container_data)
@@ -152,13 +188,16 @@ class DockerMonitoring(Monitoring):
 
             print("Containers data stored in {:.2f} sec\n".format(self.delay))
             print("---- Sleep 5 sec ----")
-            time.sleep(5)
+            time.sleep(10)
         else:
             print("Wait for execution done")
             time.sleep(15)
 
     def main(self):
         super().run_monitoring()
+        with open('csv_file.csv', 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(["date", "cpu %", "memory %", "disk I", "disk O", "number"])
         while True:
             self.run_monitoring()
 
