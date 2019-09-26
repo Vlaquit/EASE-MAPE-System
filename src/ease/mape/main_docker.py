@@ -3,7 +3,7 @@ import os
 import pymongo
 import sys
 
-sys.path.insert(0, "/home/valentin/Documents/Stage/EASE MAPE System/src")
+sys.path.insert(0, "./src")
 
 from ease.mape.analysis.threshold_analysis import DockerThresholdAnalysis
 from ease.mape.planning.planning import DockerPlanning
