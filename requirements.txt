@@ -1,7 +1,7 @@
 pymongo
-dotenv
+python-dotenv
 docker
-
-
+pytz
+numpy
 
 

@@ -141,13 +141,13 @@ class DockerMonitoring(Monitoring):
             list_disk_i = []
             list_disk_o = []
             for cont in containers:
-                name = cont.name.split('_')
 
-                if "web" in name[1]:
+                if "" in cont.name:
                     self.nb_containers += 1
                     try:
                         container_stats = cont.stats(decode=False, stream=False)
-                        container_data[cont.name] = {'short_id': cont.short_id,
+                        name = cont.name.replace(".", "_")
+                        container_data[name] = {'short_id': cont.short_id,
                                                      'cpu': {'cpu_usage': self.get_cpu_percent(container_stats)},
                                                      'memory': {'memory': self.get_memory(container_stats)['memory'],
                                                                 'memory_limit': self.get_memory(container_stats)['memory_limit'],
@@ -157,10 +157,10 @@ class DockerMonitoring(Monitoring):
                                                      'network': {'rx': self.get_network_throughput(container_stats)['rx'],
                                                                  'tx': self.get_network_throughput(container_stats)['tx']}}
 
-                        list_cpu.append(container_data[cont.name].get("cpu").get("cpu_usage"))
-                        list_mem.append(container_data[cont.name]['memory']['memory_percent'])
-                        list_disk_i.append(container_data[cont.name]['disk']['disk_i'])
-                        list_disk_o.append(container_data[cont.name]['disk']['disk_o'])
+                        list_cpu.append(container_data[name].get("cpu").get("cpu_usage"))
+                        list_mem.append(container_data[name]['memory']['memory_percent'])
+                        list_disk_i.append(container_data[name]['disk']['disk_i'])
+                        list_disk_o.append(container_data[name]['disk']['disk_o'])
 
                     except:
                         pass
@@ -181,7 +181,7 @@ class DockerMonitoring(Monitoring):
                                  ])
             container_data['nb_of_containers'] = self.nb_containers
 
-            self.db.containers.insert(container_data)
+            self.db.containers.insert_one(container_data)
 
             t2 = time.time()
             self.delay = float(t2 - t1)
