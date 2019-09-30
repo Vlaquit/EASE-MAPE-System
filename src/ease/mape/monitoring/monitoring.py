@@ -141,7 +141,6 @@ class DockerMonitoring(Monitoring):
             list_disk_i = []
             list_disk_o = []
             for cont in containers:
-                print(cont.labels.get('com.docker.compose.service'))
                 if "db" not in str(cont.labels.get('com.docker.compose.service')):
                     self.nb_containers += 1
                     try:

@@ -4,5 +4,20 @@ We want to develop a MAPE framework. Being a framework, we want the components o
 
 Python version : 3.6
 
-**User manual**
+**User manual :**
 https://docs.google.com/document/d/1reJniVGFsFay0vmqaKLxVgArONzC0NXDCdRdKX7rKW0/edit?usp=sharing
+
+### **Requirements**
+
+See [requirements.txt](./requirements.txt) 
+
+
+### **Get started**
+How to run :
+
+* Monitoring only : [monitoring.sh](./monitoring.sh)
+
+* Auto-scale : [autoscale.sh](./autoscale.sh)
+
+* Local MongoDB database : [db.sh](./db.sh)
+
