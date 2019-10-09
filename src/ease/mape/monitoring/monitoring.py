@@ -159,9 +159,9 @@ class DockerMonitoringV1(Monitoring):
             t2 = time.time()
             self.delay = float(t2 - t1)
             print("Time to insert into the database {:.2f}".format(self.delay))
-            if self.delay < 15:
+            if self.delay < 10:
                 t3 = time.time()
-                time.sleep(15 - self.delay)
+                time.sleep(10 - self.delay)
                 t4 = time.time()
                 self.delay = t4 - t1
 
