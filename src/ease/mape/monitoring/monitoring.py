@@ -114,7 +114,7 @@ class DockerMonitoringV1(Monitoring):
             list_disk_i = []
             list_disk_o = []
             for cont in containers:
-                if "db" not in str(cont.labels.get('com.docker.compose.service')):
+                if "bb" not in str(cont.labels.get('com.docker.compose.service')):
                     self.nb_containers += 1
                     try:
                         container_stats = cont.stats(decode=False, stream=False)
