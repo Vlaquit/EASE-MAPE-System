@@ -1,17 +1,18 @@
+import csv
 import datetime
+import io
+import json
 import os
 import time
 from abc import ABC, abstractmethod
+from ast import literal_eval
 
 import docker
 import pymongo
-import csv
-
 import pytz
-from numpy import mean
-
-
+import requests
 from dotenv import load_dotenv
+from numpy import mean
 
 # Get environment variable
 load_dotenv()
@@ -22,6 +23,16 @@ class Monitoring(ABC):
         self.client_to_monitor = client_to_monitor
         self.mongo_client = mongo_client
         self.db = None
+
+    @abstractmethod
+    def run_monitoring(self):
+        self.db = self.mongo_client.monitoring
+        # self.db.containers.drop()
+
+
+class DockerMonitoringV1(Monitoring):
+    def __init__(self, client_to_monitor, mongo_client):
+        super().__init__(client_to_monitor, mongo_client)
         self.run = True
         self.cpu = 0.0
         self.system_cpu = 0.0
@@ -36,36 +47,6 @@ class Monitoring(ABC):
         self.rx_bytes = 0.0
         self.tx_bytes = 0.0
         self.delay = 0.0
-
-    @abstractmethod
-    def get_cpu_percent(self, data):
-        pass
-
-    @abstractmethod
-    def get_memory(self, data):
-        pass
-
-    @abstractmethod
-    def get_disk_io(self, data):
-        pass
-
-    @abstractmethod
-    def get_network_throughput(self, data):
-        pass
-
-    @abstractmethod
-    def run_monitoring(self):
-        self.db = self.mongo_client.monitoring
-        # self.db.containers.drop()
-
-    @abstractmethod
-    def make_break(self):
-        pass
-
-
-class DockerMonitoring(Monitoring):
-    def __init__(self, client_to_monitor, mongo_client):
-        super().__init__(client_to_monitor, mongo_client)
         self.nb_containers = 0
         self.csv_file = None
 
@@ -114,20 +95,12 @@ class DockerMonitoring(Monitoring):
 
         return {'rx': self.rx_bytes, 'tx': self.tx_bytes}
 
-    def make_break(self):
-        self.run = not self.run
-
-    def export_to_csv(self, csv_file, data):
-        data['date'] = data['date'].strftime('%B %d %Y - %H:%M:%S')
-
-        pass
-
     def run_monitoring(self):
 
         self.nb_containers = 0
         self.delay = 0.0
         os.system("clear")
-        print("Monitoring is running\n")
+        print("Monitoring is running\nDocker remote API")
 
         t1 = time.time()
 
@@ -145,16 +118,17 @@ class DockerMonitoring(Monitoring):
                     self.nb_containers += 1
                     try:
                         container_stats = cont.stats(decode=False, stream=False)
+
                         name = cont.name.replace(".", "_")
                         container_data[name] = {'short_id': cont.short_id,
-                                                     'cpu': {'cpu_usage': self.get_cpu_percent(container_stats)},
-                                                     'memory': {'memory': self.get_memory(container_stats)['memory'],
-                                                                'memory_limit': self.get_memory(container_stats)['memory_limit'],
-                                                                'memory_percent': self.get_memory(container_stats)['memory_percent']},
-                                                     'disk': {'disk_i': self.get_disk_io(container_stats)['disk_i'],
-                                                              'disk_o': self.get_disk_io(container_stats)['disk_o']},
-                                                     'network': {'rx': self.get_network_throughput(container_stats)['rx'],
-                                                                 'tx': self.get_network_throughput(container_stats)['tx']}}
+                                                'cpu': {'cpu_usage': self.get_cpu_percent(container_stats)},
+                                                'memory': {'memory': self.get_memory(container_stats)['memory'],
+                                                           'memory_limit': self.get_memory(container_stats)['memory_limit'],
+                                                           'memory_percent': self.get_memory(container_stats)['memory_percent']},
+                                                'disk': {'disk_i': self.get_disk_io(container_stats)['disk_i'],
+                                                         'disk_o': self.get_disk_io(container_stats)['disk_o']},
+                                                'network': {'rx': self.get_network_throughput(container_stats)['rx'],
+                                                            'tx': self.get_network_throughput(container_stats)['tx']}}
 
                         list_cpu.append(container_data[name].get("cpu").get("cpu_usage"))
                         list_mem.append(container_data[name]['memory']['memory_percent'])
@@ -184,10 +158,17 @@ class DockerMonitoring(Monitoring):
 
             t2 = time.time()
             self.delay = float(t2 - t1)
+            print("Time to insert into the database {:.2f}".format(self.delay))
+            if self.delay < 15:
+                t3 = time.time()
+                time.sleep(15 - self.delay)
+                t4 = time.time()
+                self.delay = t4 - t1
 
             print("Containers data stored in {:.2f} sec\n".format(self.delay))
-            print("---- Sleep 5 sec ----")
-            time.sleep(10)
+            # wait = 10
+            # print("---- Sleep % sec ----" % wait)
+            # time.sleep(wait)
         else:
             print("Wait for execution done")
             time.sleep(15)
@@ -196,33 +177,65 @@ class DockerMonitoring(Monitoring):
         super().run_monitoring()
         with open('csv_file.csv', 'w') as f:
             writer = csv.writer(f)
-            writer.writerow(["date", "cpu %", "memory %", "disk I", "disk O", "number"])
+            writer.writerow(["date", "cpu %", "memory %", "disk I", "disk O", "number", "resp_time", "session_rate", "nb_sessions"])
         while True:
             self.run_monitoring()
 
 
-# TODO
-class KubernetesMonitoring(Monitoring):
-
-    def get_cpu_percent(self, data):
-        pass
-
-    def make_break(self):
-        pass
-
-    def get_memory(self, data):
-        pass
-
-    def get_disk_io(self, data):
-        pass
-
-    def get_network_throughput(self, data):
-        pass
+class DockerMonitoringV2(Monitoring):
 
     def run_monitoring(self):
         pass
 
 
+# TODO
+class KubernetesMonitoring(Monitoring):
+
+    def run_monitoring(self):
+        pass
+
+
+class CAdvisorMonitoring(Monitoring):
+    def __init__(self, mongo_client, cadvisor_host):
+        super().__init__(mongo_client, cadvisor_host)
+        self.cpu_data = {}
+        self.data = {}
+        self.nb_containers = 0
+        self.delay = 0.0
+
+    def get_cadvisor_stats(self, url):
+        req = requests.get(url)
+        page = req.content
+        data = page.decode("utf8")
+        # print(data)
+        reader = csv.DictReader(io.StringIO(data))
+        json_data = json.dumps(list(page))
+        # print(json_data)
+        return data
+
+    def run_monitoring(self):
+        super().run_monitoring()
+        os.system("clear")
+        print("Monitoring is running\ncAdvisor")
+        containers = docker.from_env().containers.list()
+        self.data = {}
+        self.cpu_data = {}
+        for cont in containers:
+            cont_short_id = str(cont.short_id)
+            cont_id = str(cont.id)
+            cont_name = str(cont.name).replace(".", "_")
+            cont_service = cont.labels.get('com.docker.compose.service')
+
+            url = self.client_to_monitor + cont_short_id
+            self.data[cont_name] = json.loads(self.get_cadvisor_stats(url))
+            self.cpu_data[cont_name] = {"service": cont_service, "cpu_total_usage": self.data[cont_name]["/docker/" + cont_id]["stats"][-1]["cpu"]["usage"]["total"]}
+        print(self.cpu_data)
+        self.db.cadvisor_monitoring.insert_one(self.cpu_data)
+        print("successful")
+
+
 if __name__ == "__main__":
-    docker_monitoring = DockerMonitoring(docker.from_env(), pymongo.MongoClient(os.getenv("URI")))
+    docker_monitoring = DockerMonitoringV1(docker.from_env(), pymongo.MongoClient(os.getenv("URI")))
     docker_monitoring.main()
+    # cadvisor_monitoring = CAdvisorMonitoring("http://localhost:8080/api/v1.3/docker/", pymongo.MongoClient(os.getenv("URI")))
+    # cadvisor_monitoring.run_monitoring()
