@@ -1,20 +1,20 @@
 version: '2.2'
 
 services:
-  db:
+  bb:
     image: mongo:3-xenial
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: password
     ports:
-      - 3000:27017
+      - 2000:27017
     volumes:
       - ./mongodb:/data/db:rw
 
-  dbmanager:
+  bbmanager:
     image: mongo-express
     links:
-      - db
+      - bb
     ports:
       - 8081:8081
     environment:
