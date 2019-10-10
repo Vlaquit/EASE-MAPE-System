@@ -3,9 +3,13 @@ import datetime
 import io
 import json
 import os
+import sys
 import time
 from abc import ABC, abstractmethod
 from ast import literal_eval
+
+sys.path.insert(0, "./src")
+
 
 import docker
 import pymongo
@@ -15,6 +19,8 @@ from dotenv import load_dotenv
 from numpy import mean
 
 # Get environment variable
+from ease.mape.monitoring import haproxy_monitoring
+
 load_dotenv()
 
 
@@ -48,6 +54,7 @@ class DockerMonitoringV1(Monitoring):
         self.tx_bytes = 0.0
         self.delay = 0.0
         self.nb_containers = 0
+        self.haproxy_stats = []
         self.csv_file = None
 
     def get_cpu_percent(self, data):
@@ -143,6 +150,11 @@ class DockerMonitoringV1(Monitoring):
             disk_i_average = round(mean(list_disk_i), 2)
             disk_o_average = round(mean(list_disk_o), 2)
 
+            try:
+                self.haproxy_stats = haproxy_monitoring.get_data(haproxy_monitoring.get_haproxy_stats(os.getenv("HAPROXY_URL")))
+            except:
+                pass
+
             with open('csv_file.csv', 'a') as f:
                 writer = csv.writer(f)
                 writer.writerow([container_data['date'].strftime('%H:%M:%S'),
@@ -150,7 +162,10 @@ class DockerMonitoringV1(Monitoring):
                                  mem_average,
                                  disk_i_average,
                                  disk_o_average,
-                                 self.nb_containers
+                                 self.nb_containers,
+                                 self.haproxy_stats[0],
+                                 self.haproxy_stats[1],
+                                 self.haproxy_stats[2]
                                  ])
             container_data['nb_of_containers'] = self.nb_containers
 
@@ -159,25 +174,28 @@ class DockerMonitoringV1(Monitoring):
             t2 = time.time()
             self.delay = float(t2 - t1)
             print("Time to insert into the database {:.2f}".format(self.delay))
-            if self.delay < 15:
+            print(type(os.getenv("SLEEP_TIME")))
+            print(type(self.delay))
+
+            if self.delay < int(os.getenv("SLEEP_TIME")):
                 t3 = time.time()
-                time.sleep(15 - self.delay)
+                time.sleep(int(os.getenv("SLEEP_TIME")) - self.delay)
                 t4 = time.time()
                 self.delay = t4 - t1
 
-            print("Containers data stored in {:.2f} sec\n".format(self.delay))
+            print("Done in {:.2f} sec\n".format(self.delay))
             # wait = 10
             # print("---- Sleep % sec ----" % wait)
             # time.sleep(wait)
         else:
             print("Wait for execution done")
-            time.sleep(15)
+            time.sleep(int(os.getenv("SLEEP_TIME")))
 
     def main(self):
         super().run_monitoring()
         with open('csv_file.csv', 'w') as f:
             writer = csv.writer(f)
-            writer.writerow(["date", "cpu %", "memory %", "disk I", "disk O", "number", "resp_time", "session_rate", "nb_sessions"])
+            writer.writerow(["date", "cpu %", "memory %", "disk I", "disk O", "number", "haproxy_resp_time", "haproxy_session_rate", "haproxy_nb_sessions"])
         while True:
             self.run_monitoring()
 

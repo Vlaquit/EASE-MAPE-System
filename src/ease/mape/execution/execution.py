@@ -42,7 +42,7 @@ class DockerScale(Execution):
             else:
                 os.system("docker-compose -f {} up -d --scale web={}".format(os.getenv("DOCKER_COMPOSE_FILE_DIRECTORY"),
                                                                              planning.nb_containers - 1))
-        time.sleep(15)
+        time.sleep(1)
         # self.notify()
 
     def notify(self):

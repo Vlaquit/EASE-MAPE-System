@@ -79,5 +79,4 @@ class DockerThresholdAnalysis(ThresholdAnalysis):
 
         print("Done")
 
-        time.sleep(5)
-
+        time.sleep(20)
