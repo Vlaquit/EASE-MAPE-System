@@ -1,8 +1,0 @@
-requests
-pymongo
-python-dotenv
-docker
-pytz
-numpy
-
-

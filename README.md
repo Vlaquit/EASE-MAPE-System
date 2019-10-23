@@ -15,9 +15,9 @@ See [requirements.txt](./requirements.txt)
 ### **Get started**
 How to run :
 
-* Monitoring only : [monitoring.sh](./monitoring.sh)
+* Monitoring only : [monitoring.sh](scripts/monitoring.sh)
 
-* Auto-scale : [autoscale.sh](./autoscale.sh)
+* Auto-scale : [autoscale.sh](scripts/autoscale.sh)
 
-* Local MongoDB database : [db.sh](./db.sh)
+* Local MongoDB database : [db.sh](scripts/db.sh)
 

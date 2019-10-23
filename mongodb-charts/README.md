@@ -1,1 +1,0 @@
-**Mongodb Charts documentation:** https://docs.mongodb.com/charts/saas/
