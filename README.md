@@ -5,7 +5,7 @@ We want to develop a MAPE framework. Being a framework, we want the components o
 Python version : 3.6
 
 **User manual :**
-https://docs.google.com/document/d/1reJniVGFsFay0vmqaKLxVgArONzC0NXDCdRdKX7rKW0/edit?usp=sharing
+https://docs.google.com/document/d/1wVRlnXd6rdfKBoX8iUChjg8Cn6gEhNTgGkqCBmt5iBI/edit?usp=sharing
 
 ### **Requirements**
 
