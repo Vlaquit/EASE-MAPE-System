@@ -1,6 +1,6 @@
 import sys
 
-from numpy import mean
+
 sys.path.insert(0, ".")
 
 from analysis.analysis import Analysis
@@ -8,7 +8,7 @@ from analysis.analysis import Analysis
 
 class ThresholdAnalysis(Analysis):
     def __init__(self, mongodb_client, upper_threshold, lower_threshold):
-        if upper_threshold <= lower_threshold or upper_threshold >100 or lower_threshold <0:
+        if upper_threshold <= lower_threshold or upper_threshold > 100 or lower_threshold < 0:
             raise ValueError("Invalid threshold. Please make sure 0<lower_threshold<upper_threshold<100.")
         super().__init__(mongodb_client)
 
@@ -47,17 +47,17 @@ class ThresholdAnalysis(Analysis):
         data_items = list(last_data.items())
         for i in range(3, len(data_items)):
             self.cpu_list.append(data_items[i][1].get("cpu_percent"))
-        self.cpu_average = mean(self.cpu_list)
+        self.cpu_average = sum(self.cpu_list) / len(self.cpu_list)
         print("CPU average {} ".format(self.cpu_average))
         print("Pre CPU average {} ".format(self.pre_cpu_average))
-        print("Thresholds : Upper {} Lower {}".format(self.get_upper_threshold(),self.get_lower_threshold()))
+        print("Thresholds : Upper {} Lower {}".format(self.get_upper_threshold(), self.get_lower_threshold()))
         if self.pre_cpu_average != self.cpu_average:
             self.pre_cpu_average = self.cpu_average
-            if self.analyse_cpu(self.cpu_average) == -1 :
+            if self.analyse_cpu(self.cpu_average) == -1:
                 self.result = self.analyse_cpu(self.cpu_average)
                 print("Analyse: Scale down\n")
                 super().notify()
-            elif self.analyse_cpu(self.cpu_average) == 1 :
+            elif self.analyse_cpu(self.cpu_average) == 1:
                 self.result = self.analyse_cpu(self.cpu_average)
                 print("Analyse: Scale up\n")
                 super().notify()
@@ -65,4 +65,3 @@ class ThresholdAnalysis(Analysis):
                 print("Analyse: RAS\n")
         else:
             print("Analyse: RAS\n")
-

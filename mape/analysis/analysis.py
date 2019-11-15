@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class Analysis(ABC):
     def __init__(self, mongodb_client):
         self.mongodb_client = mongodb_client

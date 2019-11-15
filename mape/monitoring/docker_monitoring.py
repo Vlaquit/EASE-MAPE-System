@@ -7,7 +7,8 @@ import docker
 import pymongo
 import pytz
 from dotenv import load_dotenv
-
+from signal import signal, SIGINT
+from sys import exit
 from monitoring import Monitoring
 
 load_dotenv()
@@ -107,10 +108,16 @@ class DockerMonitoring(Monitoring):
         print("Time to insert into the database {:.2f} \n ______________".format(self.delay))
 
 
+def handler(signal_received, frame):
+    exit(0)
+
+
 def main():
+    signal(SIGINT, handler)
     monitoring = DockerMonitoring(pymongo.MongoClient(os.getenv("URI")), docker.from_env())
     while True:
         monitoring.update()
+        time.sleep(1)
 
 
 if __name__ == "__main__":

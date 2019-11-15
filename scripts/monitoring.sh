@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python3 ../mape/monitoring/docker_monitoring.py
+python3.6 ./mape/monitoring/docker_monitoring.py

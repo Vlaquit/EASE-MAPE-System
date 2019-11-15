@@ -15,3 +15,9 @@ version = '0.2'
 
 default_task = "install_dependencies"
 
+
+@init
+def set_properties(project):
+    project.depends_on("docker")
+    project.depends_on_requirements("requirements.txt")
+
