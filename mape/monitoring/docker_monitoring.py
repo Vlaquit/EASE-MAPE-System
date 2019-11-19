@@ -87,11 +87,14 @@ class DockerMonitoring(Monitoring):
         for cont in containers:
             if "web" in str(cont.labels.get('com.docker.compose.service')):
                 self.nb_containers += 1
+                print(cont.name)
+                print(self.mongodb_client.powerapi.smartwatts.find_one({"target": str(cont.name)}, sort=[('_id', pymongo.DESCENDING)]).get("power"))
                 try:
                     container_stats = cont.stats(decode=False, stream=False)
                     name = cont.name.replace(".", "_")
                     data[name] = {'short_id': cont.short_id,
                                   'cpu_percent': self.get_cpu_percent(container_stats),
+                                  'cpu_power': self.mongodb_client.powerapi.smartwatts.find_one({"target":cont.name}, sort=[('_id', pymongo.DESCENDING)]).get("power"),
                                   'memory': self.get_memory(container_stats)['memory'],
                                   'memory_limit': self.get_memory(container_stats)['memory_limit'],
                                   'memory_percent': self.get_memory(container_stats)['memory_percent'],
@@ -101,6 +104,7 @@ class DockerMonitoring(Monitoring):
                                   'net_tx': self.get_network_throughput(container_stats)['tx']}
                 except:
                     pass
+
         data['nb_containers'] = self.nb_containers
         super().database_insertion(data)
         t2 = time.time()
