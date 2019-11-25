@@ -15,7 +15,7 @@ See [requirements.txt](./requirements.txt)
 ### **Get started**
 How to run :
 
-* Monitoring only : [monitoring.sh](scripts/monitoring.sh)
+* Monitoring only : [monitoring.sh](scripts/docker_monitoring.sh)
 
 * Auto-scale : [autoscale.sh](scripts/autoscale.sh)
 

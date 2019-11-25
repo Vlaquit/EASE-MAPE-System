@@ -10,7 +10,7 @@ from planning.threshold_planning import DockerPlanning
 
 
 def main():
-    analysis = ThresholdAnalysis(pymongo.MongoClient(os.getenv("URI")), 50, 30)
+    analysis = ThresholdAnalysis(pymongo.MongoClient(os.getenv("URI")), 70, 30)
     planning = DockerPlanning(analysis)
     execution = DockerExecution(planning)
 
